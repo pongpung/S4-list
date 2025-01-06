@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID and Name Saver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .saved-list {
+            margin-top: 20px;
+        }
+        .saved-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .saved-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .actions button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .actions button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>S4 ID and Name</h1>
+        <form id="dataForm">
+            <label for="id">ID Number:</label>
+            <input type="number" id="id" required>
+
+            <label for="name">Name:</label>
+            <input type="text" id="name" required>
+
+            <button type="submit">Save</button>
+        </form>
+
+        <div class="saved-list">
+            <h2>Saved Entries</h2>
+            <ul id="entriesList"></ul>
+        </div>
+    </div>
+
+    <script>
+        const dataForm = document.getElementById('dataForm');
+        const entriesList = document.getElementById('entriesList');
+
+        // Function to save data to localStorage
+        function saveData(id, name) {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries.push({ id, name });
+            localStorage.setItem('entries', JSON.stringify(entries));
+        }
+
+        // Function to update data in localStorage
+        function updateData(index, id, name) {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entries[index] = { id, name };
+            localStorage.setItem('entries', JSON.stringify(entries));
+        }
+
+        // Function to display data
+        function displayEntries() {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            entriesList.innerHTML = '';
+            entries.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    ID: ${entry.id}, Name: ${entry.name}
+                    <div class="actions">
+                        <button onclick="editEntry(${index})">Edit</button>
+                    </div>
+                `;
+                entriesList.appendChild(li);
+            });
+        }
+
+        // Function to handle editing an entry
+        function editEntry(index) {
+            const entries = JSON.parse(localStorage.getItem('entries')) || [];
+            const entry = entries[index];
+
+            const idField = document.getElementById('id');
+            const nameField = document.getElementById('name');
+
+            idField.value = entry.id;
+            nameField.value = entry.name;
+
+            dataForm.onsubmit = (e) => {
+                e.preventDefault();
+
+                const newId = idField.value;
+                const newName = nameField.value;
+
+                updateData(index, newId, newName);
+                displayEntries();
+
+                dataForm.reset();
+                dataForm.onsubmit = defaultSubmit;
+            };
+        }
+
+        // Default form submission handler
+        function defaultSubmit(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('id').value;
+            const name = document.getElementById('name').value;
+
+            saveData(id, name);
+            displayEntries();
+
+            dataForm.reset();
+        }
+
+        // Set default form submission handler
+        dataForm.onsubmit = defaultSubmit;
+
+        // Display entries on page load
+        displayEntries();
+    </script>
+</body>
+</html>
