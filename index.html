@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js"></script>
     <title>ID and Name Saver</title>
     <style>
         body {
@@ -101,39 +99,41 @@
         </div>
     </div>
 
-    <script>
-        // Firebase configuration
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getDatabase, ref, set, get, child, update, push, remove } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+
+        // Your Firebase config
         const firebaseConfig = {
-            apiKey: "AIzaSyCg7KkSUGlx8idFI00wT0qzM9Zpjt7CPFk",
-            authDomain: "s4-lists.firebaseapp.com",
-            projectId: "s4-lists",
-            storageBucket: "s4-lists.firebasestorage.app",
-            messagingSenderId: "781235513121",
-            appId: "1:781235513121:web:806fefc106a80b2f6f4060",
-            measurementId: "G-EHX79PVQES"
+            apiKey: "AIzaSyC4TgtyWDRx0tSJivj7HjGD0B0HzSA3OFw",
+            authDomain: "list-b85eb.firebaseapp.com",
+            projectId: "list-b85eb",
+            storageBucket: "list-b85eb.firebasestorage.app",
+            messagingSenderId: "680439191018",
+            appId: "1:680439191018:web:d31174e0c67d933a1b4e93"
         };
 
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
 
         const dataForm = document.getElementById('dataForm');
         const entriesList = document.getElementById('entriesList');
 
         // Function to save data to Firebase
         function saveData(id, name) {
-            const entriesRef = database.ref('entries');
-            const newEntryRef = entriesRef.push(); // Generates a unique key for each entry
-            newEntryRef.set({
+            const newEntryRef = push(ref(database, 'entries'));
+            set(newEntryRef, {
                 id: id,
                 name: name
             });
         }
 
         // Function to update data in Firebase
-        function updateData(key, id, name) {
-            const entryRef = database.ref('entries/' + key);
-            entryRef.set({
+        function updateData(index, id, name) {
+            const entryRef = ref(database, 'entries/' + index);
+            update(entryRef, {
                 id: id,
                 name: name
             });
@@ -141,30 +141,32 @@
 
         // Function to display data from Firebase
         function displayEntries() {
-            const entriesRef = database.ref('entries');
-            entriesRef.on('value', (snapshot) => {
-                const entries = snapshot.val();
-                entriesList.innerHTML = '';
-                for (const key in entries) {
-                    const entry = entries[key];
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        ID: ${entry.id}, Name: ${entry.name}
-                        <div class="actions">
-                            <button onclick="editEntry('${key}')">Edit</button>
-                        </div>
-                    `;
-                    entriesList.appendChild(li);
+            const entriesRef = ref(database, 'entries');
+            get(entriesRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const entries = snapshot.val();
+                    entriesList.innerHTML = '';
+                    for (let index in entries) {
+                        const entry = entries[index];
+                        const li = document.createElement('li');
+                        li.innerHTML = 
+                            `ID: ${entry.id}, Name: ${entry.name}
+                            <div class="actions">
+                                <button onclick="editEntry('${index}')">Edit</button>
+                            </div>`;
+                        entriesList.appendChild(li);
+                    }
+                } else {
+                    console.log("No entries available");
                 }
             });
         }
 
         // Function to handle editing an entry
-        function editEntry(key) {
-            const entryRef = database.ref('entries/' + key);
-            entryRef.once('value', (snapshot) => {
+        function editEntry(index) {
+            const entryRef = ref(database, 'entries/' + index);
+            get(entryRef).then((snapshot) => {
                 const entry = snapshot.val();
-
                 const idField = document.getElementById('id');
                 const nameField = document.getElementById('name');
 
@@ -177,7 +179,7 @@
                     const newId = idField.value;
                     const newName = nameField.value;
 
-                    updateData(key, newId, newName);
+                    updateData(index, newId, newName);
                     displayEntries();
 
                     dataForm.reset();
@@ -205,6 +207,5 @@
         // Display entries on page load
         displayEntries();
     </script>
-
 </body>
 </html>
