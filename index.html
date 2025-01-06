@@ -16,6 +16,7 @@
             align-items: center;
             height: 100vh;
         }
+
         .container {
             background: #fff;
             padding: 20px;
@@ -24,22 +25,27 @@
             width: 100%;
             max-width: 400px;
         }
+
         h1 {
             text-align: center;
         }
+
         form {
             display: flex;
             flex-direction: column;
         }
+
         label {
             margin-top: 10px;
         }
+
         input[type="text"], input[type="number"] {
             padding: 10px;
             margin-top: 5px;
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+
         button {
             margin-top: 20px;
             padding: 10px;
@@ -49,16 +55,20 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         .saved-list {
             margin-top: 20px;
         }
+
         .saved-list ul {
             list-style-type: none;
             padding: 0;
         }
+
         .saved-list li {
             padding: 5px 0;
             border-bottom: 1px solid #ccc;
@@ -66,6 +76,11 @@
             justify-content: space-between;
             align-items: center;
         }
+
+        .saved-list span {
+            flex-grow: 1;
+        }
+
         .actions button {
             margin-left: 10px;
             padding: 5px 10px;
@@ -75,14 +90,25 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
         .actions button:hover {
             background-color: #218838;
         }
-        .delete-button {
+
+        .actions .delete-button {
             background-color: #dc3545;
         }
-        .delete-button:hover {
+
+        .actions .delete-button:hover {
             background-color: #c82333;
+        }
+
+        /* Make buttons unselectable */
+        .actions button {
+            user-select: none; /* Prevent text selection */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
     </style>
 </head>
@@ -106,16 +132,16 @@
     </div>
 
     <script type="module">
-        // Import Firebase functions
+        // Import the Firebase libraries
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getDatabase, ref, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
         // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyC4TgtyWDRx0tSJivj7HjGD0B0HzSA3OFw",
             authDomain: "list-b85eb.firebaseapp.com",
             projectId: "list-b85eb",
-            storageBucket: "list-b85eb.firebasestorage.app",
+            storageBucket: "list-b85eb.appspot.com",
             messagingSenderId: "680439191018",
             appId: "1:680439191018:web:d31174e0c67d933a1b4e93"
         };
@@ -123,94 +149,89 @@
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
+        const entriesRef = ref(database, "entries");
 
-        // DOM Elements
         const dataForm = document.getElementById("dataForm");
         const entriesList = document.getElementById("entriesList");
 
-        // Save Data to Firebase
-        function saveData(id, name) {
-            const entriesRef = ref(database, "entries");
-            const newEntryRef = push(entriesRef);
-            set(newEntryRef, { id, name });
-        }
-
-        // Display Data from Firebase
-        function displayEntries() {
-            const entriesRef = ref(database, "entries");
-            get(entriesRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const entries = snapshot.val();
-                    entriesList.innerHTML = ""; // Clear the list
-                    for (let key in entries) {
-                        const entry = entries[key];
-                        const li = document.createElement("li");
-
-                        // Display ID and Name in one line, separated by a comma
-                        li.innerHTML = `
-                            ${entry.id}, ${entry.name}
-                            <div class="actions">
-                                <button onclick="editEntry('${key}')">Edit</button>
-                                <button class="delete-button" onclick="deleteEntry('${key}')">Delete</button>
-                            </div>
-                        `;
-                        entriesList.appendChild(li);
-                    }
-                } else {
-                    entriesList.innerHTML = "<li>No entries found</li>";
-                }
+        // Function to display entries
+        function displayEntries(entries) {
+            entriesList.innerHTML = "";
+            Object.entries(entries).forEach(([key, entry]) => {
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    <span>${entry.id}, ${entry.name}</span>
+                    <div class="actions">
+                        <button onclick="editEntry('${key}')">Edit</button>
+                        <button class="delete-button" onclick="deleteEntry('${key}')">Delete</button>
+                    </div>
+                `;
+                entriesList.appendChild(li);
             });
         }
 
-        // Edit Entry in Firebase
-        window.editEntry = function(key) {
-            const entriesRef = ref(database, `entries/${key}`);
-            get(entriesRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const entry = snapshot.val();
-
-                    // Pre-fill form with data to edit
-                    document.getElementById("id").value = entry.id;
-                    document.getElementById("name").value = entry.name;
-
-                    // Change form behavior to update on submit
-                    dataForm.onsubmit = (e) => {
-                        e.preventDefault();
-                        const updatedId = document.getElementById("id").value;
-                        const updatedName = document.getElementById("name").value;
-
-                        update(entriesRef, { id: updatedId, name: updatedName }).then(() => {
-                            displayEntries(); // Refresh the list
-                            dataForm.reset(); // Reset the form
-                            dataForm.onsubmit = defaultSubmit; // Restore default submit behavior
-                        });
-                    };
-                }
-            });
-        };
-
-        // Delete Entry from Firebase
-        window.deleteEntry = function(key) {
-            const entryRef = ref(database, `entries/${key}`);
-            remove(entryRef).then(() => {
-                displayEntries(); // Refresh the list
-            });
-        };
-
-        // Default Form Submit
-        function defaultSubmit(e) {
+        // Function to add new entry
+        dataForm.addEventListener("submit", (e) => {
             e.preventDefault();
+
             const id = document.getElementById("id").value;
             const name = document.getElementById("name").value;
 
-            saveData(id, name);
-            displayEntries();
-            dataForm.reset();
-        }
+            const newEntryRef = push(entriesRef);
+            set(newEntryRef, { id, name });
 
-        // Set default form behavior and display entries on page load
-        dataForm.onsubmit = defaultSubmit;
-        displayEntries();
+            dataForm.reset();
+        });
+
+        // Function to edit an entry
+        window.editEntry = (key) => {
+            const idField = document.getElementById("id");
+            const nameField = document.getElementById("name");
+
+            onValue(ref(database, `entries/${key}`), (snapshot) => {
+                const entry = snapshot.val();
+                idField.value = entry.id;
+                nameField.value = entry.name;
+            });
+
+            dataForm.onsubmit = (e) => {
+                e.preventDefault();
+
+                const newId = idField.value;
+                const newName = nameField.value;
+
+                update(ref(database, `entries/${key}`), { id: newId, name: newName });
+
+                dataForm.reset();
+                dataForm.onsubmit = defaultSubmitHandler;
+            };
+        };
+
+        // Function to delete an entry
+        window.deleteEntry = (key) => {
+            remove(ref(database, `entries/${key}`));
+        };
+
+        // Default form submission handler
+        const defaultSubmitHandler = (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById("id").value;
+            const name = document.getElementById("name").value;
+
+            const newEntryRef = push(entriesRef);
+            set(newEntryRef, { id, name });
+
+            dataForm.reset();
+        };
+
+        dataForm.onsubmit = defaultSubmitHandler;
+
+        // Listen for changes in the database
+        onValue(entriesRef, (snapshot) => {
+            const entries = snapshot.val();
+            displayEntries(entries || {});
+        });
     </script>
 </body>
 </html>
