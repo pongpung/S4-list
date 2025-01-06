@@ -153,28 +153,32 @@
         }
 
         // Function to display data from Firebase
-        function displayEntries() {
-            const entriesRef = ref(database, 'entries');
-            get(entriesRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const entries = snapshot.val();
-                    entriesList.innerHTML = '';
-                    for (let index in entries) {
-                        const entry = entries[index];
-                        const li = document.createElement('li');
-                        li.innerHTML = 
-                            `ID: ${entry.id}, Name: ${entry.name}
-                            <div class="actions">
-                                <button onclick="editEntry('${index}')">Edit</button>
-                                <button class="delete-button" onclick="deleteEntry('${index}')">Delete</button>
-                            </div>`;
-                        entriesList.appendChild(li);
-                    }
-                } else {
-                    console.log("No entries available");
-                }
-            });
+function displayEntries() {
+    const entriesRef = ref(database, 'entries');
+    get(entriesRef).then((snapshot) => {
+        if (snapshot.exists()) {
+            const entries = snapshot.val();
+            entriesList.innerHTML = '';
+            for (let index in entries) {
+                const entry = entries[index];
+                const li = document.createElement('li');
+
+                // Display ID and Name in a single line, separated by a comma
+                li.innerHTML = `
+                    ${entry.id}, ${entry.name}
+                    <div class="actions">
+                        <button onclick="editEntry('${index}')">Edit</button>
+                        <button class="delete-button" onclick="deleteEntry('${index}')">Delete</button>
+                    </div>
+                `;
+                entriesList.appendChild(li);
+            }
+        } else {
+            console.log("No entries available");
         }
+    });
+}
+
 
         // Function to handle editing an entry
         function editEntry(index) {
