@@ -105,12 +105,12 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
+        // Import Firebase functions
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getDatabase, ref, set, get, child, update, push, remove } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+        import { getDatabase, ref, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
 
-        // Your Firebase config
+        // Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyC4TgtyWDRx0tSJivj7HjGD0B0HzSA3OFw",
             authDomain: "list-b85eb.firebaseapp.com",
@@ -124,117 +124,92 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        const dataForm = document.getElementById('dataForm');
-        const entriesList = document.getElementById('entriesList');
-        let editIndex = null; // Variable to store the index of the entry being edited
+        // DOM Elements
+        const dataForm = document.getElementById("dataForm");
+        const entriesList = document.getElementById("entriesList");
 
-        // Function to save data to Firebase
+        // Save Data to Firebase
         function saveData(id, name) {
-            const newEntryRef = push(ref(database, 'entries'));
-            set(newEntryRef, {
-                id: id,
-                name: name
+            const entriesRef = ref(database, "entries");
+            const newEntryRef = push(entriesRef);
+            set(newEntryRef, { id, name });
+        }
+
+        // Display Data from Firebase
+        function displayEntries() {
+            const entriesRef = ref(database, "entries");
+            get(entriesRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const entries = snapshot.val();
+                    entriesList.innerHTML = ""; // Clear the list
+                    for (let key in entries) {
+                        const entry = entries[key];
+                        const li = document.createElement("li");
+
+                        // Display ID and Name in one line, separated by a comma
+                        li.innerHTML = `
+                            ${entry.id}, ${entry.name}
+                            <div class="actions">
+                                <button onclick="editEntry('${key}')">Edit</button>
+                                <button class="delete-button" onclick="deleteEntry('${key}')">Delete</button>
+                            </div>
+                        `;
+                        entriesList.appendChild(li);
+                    }
+                } else {
+                    entriesList.innerHTML = "<li>No entries found</li>";
+                }
             });
         }
 
-        // Function to update data in Firebase
-        function updateData(index, id, name) {
-            const entryRef = ref(database, 'entries/' + index);
-            update(entryRef, {
-                id: id,
-                name: name
+        // Edit Entry in Firebase
+        window.editEntry = function(key) {
+            const entriesRef = ref(database, `entries/${key}`);
+            get(entriesRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const entry = snapshot.val();
+
+                    // Pre-fill form with data to edit
+                    document.getElementById("id").value = entry.id;
+                    document.getElementById("name").value = entry.name;
+
+                    // Change form behavior to update on submit
+                    dataForm.onsubmit = (e) => {
+                        e.preventDefault();
+                        const updatedId = document.getElementById("id").value;
+                        const updatedName = document.getElementById("name").value;
+
+                        update(entriesRef, { id: updatedId, name: updatedName }).then(() => {
+                            displayEntries(); // Refresh the list
+                            dataForm.reset(); // Reset the form
+                            dataForm.onsubmit = defaultSubmit; // Restore default submit behavior
+                        });
+                    };
+                }
             });
-        }
+        };
 
-        // Function to delete data from Firebase
-        function deleteData(index) {
-            const entryRef = ref(database, 'entries/' + index);
-            remove(entryRef);
-        }
-
-        // Function to display data from Firebase
-function displayEntries() {
-    const entriesRef = ref(database, 'entries');
-    get(entriesRef).then((snapshot) => {
-        if (snapshot.exists()) {
-            const entries = snapshot.val();
-            entriesList.innerHTML = '';
-            for (let index in entries) {
-                const entry = entries[index];
-                const li = document.createElement('li');
-
-                // Display ID and Name in a single line, separated by a comma
-                li.innerHTML = `
-                    ${entry.id}, ${entry.name}
-                    <div class="actions">
-                        <button onclick="editEntry('${index}')">Edit</button>
-                        <button class="delete-button" onclick="deleteEntry('${index}')">Delete</button>
-                    </div>
-                `;
-                entriesList.appendChild(li);
-            }
-        } else {
-            console.log("No entries available");
-        }
-    });
-}
-
-
-        // Function to handle editing an entry
-        function editEntry(index) {
-            const entryRef = ref(database, 'entries/' + index);
-            get(entryRef).then((snapshot) => {
-                const entry = snapshot.val();
-                const idField = document.getElementById('id');
-                const nameField = document.getElementById('name');
-
-                idField.value = entry.id;
-                nameField.value = entry.name;
-
-                // Set the editIndex to the current entry's index
-                editIndex = index;
-
-                // Change the form submit handler to update instead of save
-                dataForm.onsubmit = (e) => {
-                    e.preventDefault();
-
-                    const newId = idField.value;
-                    const newName = nameField.value;
-
-                    updateData(editIndex, newId, newName);
-                    displayEntries();
-
-                    dataForm.reset();
-                    dataForm.onsubmit = defaultSubmit; // Reset to default submit function
-                };
+        // Delete Entry from Firebase
+        window.deleteEntry = function(key) {
+            const entryRef = ref(database, `entries/${key}`);
+            remove(entryRef).then(() => {
+                displayEntries(); // Refresh the list
             });
-        }
+        };
 
-        // Function to handle deleting an entry
-        function deleteEntry(index) {
-            if (confirm("Are you sure you want to delete this entry?")) {
-                deleteData(index);
-                displayEntries();
-            }
-        }
-
-        // Default form submission handler
+        // Default Form Submit
         function defaultSubmit(e) {
             e.preventDefault();
-
-            const id = document.getElementById('id').value;
-            const name = document.getElementById('name').value;
+            const id = document.getElementById("id").value;
+            const name = document.getElementById("name").value;
 
             saveData(id, name);
             displayEntries();
-
             dataForm.reset();
         }
 
-        // Set default form submission handler
+        // Set default form behavior and display entries on page load
         dataForm.onsubmit = defaultSubmit;
-
-        // Display entries on page load
         displayEntries();
     </script>
 </body>
