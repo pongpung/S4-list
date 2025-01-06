@@ -1,20 +1,183 @@
-
-HomeHTMLHTML IntroductionTryit: HTML introduction 
-Result Size: 1052 x 864
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Page Title</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID and Name Saver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-top: 10px;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .saved-list {
+            margin-top: 20px;
+            display: none; /* Initially hidden */
+        }
+
+        .saved-list ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .saved-list li {
+            padding: 5px 0;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .saved-list span {
+            flex-grow: 1;
+        }
+
+        .actions button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .actions button:hover {
+            background-color: #218838;
+        }
+
+        .actions .delete-button {
+            background-color: #dc3545;
+        }
+
+        .actions .delete-button:hover {
+            background-color: #c82333;
+        }
+
+        /* Make buttons unselectable */
+        .actions button {
+            user-select: none;
+        }
+
+        .order-info {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>S4 ID and Name</h1>
+        <form id="dataForm">
+            <label for="id">ID Number:</label>
+            <input type="number" id="id" required>
 
-<h1>My First Heading</h1>
-<p>My first paragraph.</p>
+            <label for="name">Name:</label>
+            <input type="text" id="name" required>
 
-</body>
-</html>
+            <button type="submit">Save</button>
+        </form>
 
+        <button id="showEntriesButton">Show Entries</button>
 
+        <div class="saved-list">
+            <h2>Saved Entries</h2>
+            <p class="order-info">Entries are shown in ascending order by ID</p>
+            <ul id="entriesList"></ul>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the Firebase libraries
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js";
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4TgtyWDRx0tSJivj7HjGD0B0HzSA3OFw",
+            authDomain: "list-b85eb.firebaseapp.com",
+            projectId: "list-b85eb",
+            storageBucket: "list-b85eb.appspot.com",
+            messagingSenderId: "680439191018",
+            appId: "1:680439191018:web:d31174e0c67d933a1b4e93"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const entriesRef = ref(database, "entries");
+
+        const dataForm = document.getElementById("dataForm");
+        const entriesList = document.getElementById("entriesList");
+        const savedList = document.querySelector(".saved-list");
+        const showEntriesButton = document.getElementById("showEntriesButton");
+
+        // Function to display entries in ascending order by ID
+        function displayEntries(entries) {
+            entriesList.innerHTML = "";
+
+            // Convert entries object into an array and sort by ID
+            const sortedEntries = Object.entries(entries).sort(
+                ([, entryA], [, entryB]) => parseInt(entryA.id) - parseInt(entryB.id)
+            );
+
+            sortedEntries.forEach(([key, entry]) => {
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    <span>${entry.id}, ${entry.name}</span>
+                    <div class="actions">
                         <button onclick="editEntry('${key}')">Edit</button>
                         <button class="delete-button" onclick="deleteEntry('${key}')">Delete</button>
                     </div>
@@ -22,70 +185,74 @@ Result Size: 1052 x 864
                 entriesList.appendChild(li);
             });
         }
-​
+
         // Function to add a new entry
         dataForm.addEventListener("submit", (e) => {
             e.preventDefault();
-​
+
             const id = document.getElementById("id").value;
             const name = document.getElementById("name").value;
-​
+
             const newEntryRef = push(entriesRef);
             set(newEntryRef, { id, name });
-​
+
             dataForm.reset();
         });
-​
+
         // Function to edit an entry
         window.editEntry = (key) => {
             const idField = document.getElementById("id");
             const nameField = document.getElementById("name");
-​
+
             onValue(ref(database, `entries/${key}`), (snapshot) => {
                 const entry = snapshot.val();
                 idField.value = entry.id;
                 nameField.value = entry.name;
             });
-​
+
             dataForm.onsubmit = (e) => {
                 e.preventDefault();
-​
+
                 const newId = idField.value;
                 const newName = nameField.value;
-​
+
                 update(ref(database, `entries/${key}`), { id: newId, name: newName });
-​
+
                 dataForm.reset();
                 dataForm.onsubmit = defaultSubmitHandler;
             };
         };
-​
+
         // Function to delete an entry
         window.deleteEntry = (key) => {
             remove(ref(database, `entries/${key}`));
         };
-​
+
         // Default form submission handler
         const defaultSubmitHandler = (e) => {
             e.preventDefault();
-​
+
             const id = document.getElementById("id").value;
             const name = document.getElementById("name").value;
-​
+
             const newEntryRef = push(entriesRef);
             set(newEntryRef, { id, name });
-​
+
             dataForm.reset();
         };
-​
+
         dataForm.onsubmit = defaultSubmitHandler;
-​
+
         // Listen for changes in the database
         onValue(entriesRef, (snapshot) => {
             const entries = snapshot.val();
             displayEntries(entries || {});
         });
+
+        // Show Entries button functionality
+        showEntriesButton.addEventListener("click", () => {
+            savedList.style.display = "block";
+        });
     </script>
 </body>
 </html>
-​
