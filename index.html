@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js"></script>
     <title>ID and Name Saver</title>
     <style>
         body {
@@ -100,62 +102,88 @@
     </div>
 
     <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCg7KkSUGlx8idFI00wT0qzM9Zpjt7CPFk",
+            authDomain: "s4-lists.firebaseapp.com",
+            projectId: "s4-lists",
+            storageBucket: "s4-lists.firebasestorage.app",
+            messagingSenderId: "781235513121",
+            appId: "1:781235513121:web:806fefc106a80b2f6f4060",
+            measurementId: "G-EHX79PVQES"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         const dataForm = document.getElementById('dataForm');
         const entriesList = document.getElementById('entriesList');
 
-        // Function to save data to localStorage
+        // Function to save data to Firebase
         function saveData(id, name) {
-            const entries = JSON.parse(localStorage.getItem('entries')) || [];
-            entries.push({ id, name });
-            localStorage.setItem('entries', JSON.stringify(entries));
+            const entriesRef = database.ref('entries');
+            const newEntryRef = entriesRef.push(); // Generates a unique key for each entry
+            newEntryRef.set({
+                id: id,
+                name: name
+            });
         }
 
-        // Function to update data in localStorage
-        function updateData(index, id, name) {
-            const entries = JSON.parse(localStorage.getItem('entries')) || [];
-            entries[index] = { id, name };
-            localStorage.setItem('entries', JSON.stringify(entries));
+        // Function to update data in Firebase
+        function updateData(key, id, name) {
+            const entryRef = database.ref('entries/' + key);
+            entryRef.set({
+                id: id,
+                name: name
+            });
         }
 
-        // Function to display data
+        // Function to display data from Firebase
         function displayEntries() {
-            const entries = JSON.parse(localStorage.getItem('entries')) || [];
-            entriesList.innerHTML = '';
-            entries.forEach((entry, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    ID: ${entry.id}, Name: ${entry.name}
-                    <div class="actions">
-                        <button onclick="editEntry(${index})">Edit</button>
-                    </div>
-                `;
-                entriesList.appendChild(li);
+            const entriesRef = database.ref('entries');
+            entriesRef.on('value', (snapshot) => {
+                const entries = snapshot.val();
+                entriesList.innerHTML = '';
+                for (const key in entries) {
+                    const entry = entries[key];
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        ID: ${entry.id}, Name: ${entry.name}
+                        <div class="actions">
+                            <button onclick="editEntry('${key}')">Edit</button>
+                        </div>
+                    `;
+                    entriesList.appendChild(li);
+                }
             });
         }
 
         // Function to handle editing an entry
-        function editEntry(index) {
-            const entries = JSON.parse(localStorage.getItem('entries')) || [];
-            const entry = entries[index];
+        function editEntry(key) {
+            const entryRef = database.ref('entries/' + key);
+            entryRef.once('value', (snapshot) => {
+                const entry = snapshot.val();
 
-            const idField = document.getElementById('id');
-            const nameField = document.getElementById('name');
+                const idField = document.getElementById('id');
+                const nameField = document.getElementById('name');
 
-            idField.value = entry.id;
-            nameField.value = entry.name;
+                idField.value = entry.id;
+                nameField.value = entry.name;
 
-            dataForm.onsubmit = (e) => {
-                e.preventDefault();
+                dataForm.onsubmit = (e) => {
+                    e.preventDefault();
 
-                const newId = idField.value;
-                const newName = nameField.value;
+                    const newId = idField.value;
+                    const newName = nameField.value;
 
-                updateData(index, newId, newName);
-                displayEntries();
+                    updateData(key, newId, newName);
+                    displayEntries();
 
-                dataForm.reset();
-                dataForm.onsubmit = defaultSubmit;
-            };
+                    dataForm.reset();
+                    dataForm.onsubmit = defaultSubmit;
+                };
+            });
         }
 
         // Default form submission handler
@@ -177,5 +205,6 @@
         // Display entries on page load
         displayEntries();
     </script>
+
 </body>
 </html>
